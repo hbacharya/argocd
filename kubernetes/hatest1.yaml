@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hatest1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hatest1
+  template:
+    metadata:
+      labels:
+        app: hatest1
+    spec:
+      containers:
+      - name: hatest1
+        image: hbacharya/hatest1
+        ports:
+          - containerPort: 8080
+        imagePullPolicy: IfNotPresent
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: hatest1-service
+spec:
+  selector:
+    app: hatest1
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 30082
+  type: NodePort
