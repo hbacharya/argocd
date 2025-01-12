@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: kafka
+spec:
+  serviceName: kafka-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: apache/kafka:latest
+        ports:
+        - containerPort: 9092
+          name: kafka-port
+        - containerPort: 9093
+          name: controller-port
+        env:
+        - name: KAFKA_PROCESS_ROLES
+          value: "broker,controller"
+        - name: KAFKA_NODE_ID
+          value: "0"
+        - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+          value: "0@kafka-0.kafka-service.kafka.svc.cluster.local:9093"
+        - name: KAFKA_LISTENERS
+          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: "PLAINTEXT://kafka-$(KAFKA_NODE_ID).kafka-service.kafka.svc.cluster.local:9092,CONTROLLER://kafka-$(KAFKA_NODE_ID).kafka-service.kafka.svc.cluster.local:9093"
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+        - name: KAFKA_INTER_BROKER_LISTENER_NAME
+          value: "PLAINTEXT"
+        - name: KAFKA_CONTROLLER_LISTENER_NAMES
+          value: "CONTROLLER"
+        - name: KAFKA_LOG_DIRS
+          value: "/var/lib/kafka/data --ignore-formatted"
+        - name: KAFKA_CLUSTER_ID
+          value: "3577e0fa-ba8d-4559-9ba0-0243688e902a"  # Replace with your hardcoded UUID
+        volumeMounts:
+        - name: kafka-storage
+          mountPath: /var/lib/kafka/data
+      volumes:
+      - name: kafka-storage
+        persistentVolumeClaim:
+          claimName: kafka-storage
+  volumeClaimTemplates:
+  - metadata:
+      name: kafka-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-cluster-id
+  namespace: kafka
+data:
+  cluster.id: "3577e0fa-ba8d-4559-9ba0-0243688e902a"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: kafka
+spec:
+  selector:
+    app: kafka
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      name: kafka-port
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
+      name: controller-port
+  clusterIP: None
