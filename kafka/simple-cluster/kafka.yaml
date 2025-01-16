@@ -30,13 +30,13 @@ spec:
         - name: KAFKA_CONTROLLER_QUORUM_VOTERS
           value: "0@kafka-0.kafka-service.kafka.svc.cluster.local:9093"
         - name: KAFKA_LISTENERS
-          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+          value: "INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:30092,CONTROLLER://0.0.0.0:9093"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://kafka-$(KAFKA_NODE_ID).kafka-service.kafka.svc.cluster.local:9092,CONTROLLER://kafka-$(KAFKA_NODE_ID).kafka-service.kafka.svc.cluster.local:9093"
+          value: "EXTERNAL://192.168.1.2:30092,INTERNAL://kafka-0.kafka-service.kafka.svc.cluster.local:9092,CONTROLLER://kafka-0.kafka-service.kafka.svc.cluster.local:9093"
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+          value: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
-          value: "PLAINTEXT"
+          value: "INTERNAL"
         - name: KAFKA_CONTROLLER_LISTENER_NAMES
           value: "CONTROLLER"
         - name: KAFKA_LOG_DIRS
@@ -84,4 +84,22 @@ spec:
       port: 9093
       targetPort: 9093
       name: controller-port
-  clusterIP: None
+  type: NodePort
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service-external
+  namespace: kafka
+spec:
+  selector:
+    app: kafka
+  ports:
+    - protocol: TCP
+      port: 30092
+      targetPort: 30092
+      name: kafka-port
+      nodePort: 30092  # Specify a NodePort in the range 30000-32767
+  type: NodePort
